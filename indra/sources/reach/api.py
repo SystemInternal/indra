@@ -11,7 +11,6 @@ import indra.literature.pmc_client as pmc_client
 import indra.literature.pubmed_client as pubmed_client
 from .processor import ReachProcessor
 
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -404,7 +403,7 @@ def process_fries_json_group(group_prefix, citation=None,
                             organism_priority=organism_priority)
 
 
-def process_json_str(json_str, citation=None, organism_priority=None):
+def process_reach_output(reach_output: dict):
     """Return a ReachProcessor by processing the given REACH json string.
 
     The output from the REACH parser is in this json format.
@@ -414,14 +413,6 @@ def process_json_str(json_str, citation=None, organism_priority=None):
     ----------
     json_str : str
         The json string to be processed.
-    citation : Optional[str]
-        A PubMed ID passed to be used in the evidence for the extracted INDRA
-        Statements. Default: None
-    organism_priority : Optional[list of str]
-        A list of Taxonomy IDs providing prioritization among organisms
-        when choosing protein grounding. If not given, the default behavior
-        takes the first match produced by Reach, which is prioritized to be
-        a human protein if such a match exists.
 
     Returns
     -------
@@ -429,11 +420,7 @@ def process_json_str(json_str, citation=None, organism_priority=None):
         A ReachProcessor containing the extracted INDRA Statements
         in rp.statements.
     """
-    json_dict = _preprocess_json_str(json_str)
-    if json_dict is None:
-        return None
-    rp = ReachProcessor(json_dict, pmid=citation,
-                        organism_priority=organism_priority)
+    rp = ReachProcessor(reach_output)
     rp.get_modifications()
     rp.get_complexes()
     rp.get_activation()

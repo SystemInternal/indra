@@ -3,14 +3,12 @@ import re
 import logging
 import objectpath
 from collections import defaultdict
-
 from indra.statements import *
 from indra.util import read_unicode_csv
 from indra.databases import go_client, uniprot_client
 from indra.ontology.standardize import \
     standardize_db_refs, standardize_agent_name, \
     standardize_name_db_refs
-from indra.statements.validate import validate_text_refs
 from collections import namedtuple
 
 logger = logging.getLogger(__name__)
@@ -45,19 +43,9 @@ class ReachProcessor(object):
         takes the first match produced by Reach, which is prioritized to be
         a human protein if such a match exists.
     """
-    def __init__(self, json_dict, pmid=None, organism_priority=None):
-        self.tree = objectpath.Tree(json_dict)
-        self.organism_priority = organism_priority
+    def __init__(self, reach_output: dict):
+        self.tree = objectpath.Tree(reach_output)
         self.statements = []
-        self.citation = pmid
-        if pmid is None:
-            if self.tree is not None:
-                self.citation =\
-                    self.tree.execute("$.events.object_meta.doc_id")
-                if not validate_text_refs({'PMID': self.citation}):
-                    logger.debug('The citation added is not a valid '
-                                 'PMID, removing.')
-                    self.citation = None
         self.get_all_events()
 
     def print_event_statistics(self):
@@ -308,7 +296,7 @@ class ReachProcessor(object):
             sentence = r['verbose-text']
             annotations, context = self._get_annot_context(r)
             ev = Evidence(source_api='reach', text=sentence,
-                          pmid=self.citation, annotations=annotations,
+                        annotations=annotations,
                           context=context, epistemics=epistemics)
             args = r['arguments']
             controller_agent = None
@@ -473,7 +461,7 @@ class ReachProcessor(object):
         if 'text' not in entity_term:
             return None, None
         agent_name = entity_term['text']
-        db_refs = self._get_db_refs(entity_term, self.organism_priority)
+        db_refs = self._get_db_refs(entity_term)
 
         mod_terms = entity_term.get('modifications')
         mods, muts = self._get_mods_and_muts_from_mod_terms(mod_terms)

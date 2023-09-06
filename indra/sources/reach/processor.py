@@ -182,7 +182,7 @@ class ReachProcessor(object):
                     annotations['agents']['coords'] = [controller_coords,
                                                        theme_coords]
                     ev = Evidence(source_api='reach', text=sentence,
-                                  annotations=annotations, pmid=self.citation,
+                                  annotations=annotations, pmid=None,
                                   context=context, epistemics=epistemics)
                     args = [controller_agent, theme_agent, residue, pos, ev]
 
@@ -240,7 +240,7 @@ class ReachProcessor(object):
                 annotations['agents']['coords'] = [controller_coords,
                                                    theme_coords]
                 ev = Evidence(source_api='reach', text=sentence,
-                              annotations=annotations, pmid=self.citation,
+                              annotations=annotations, pmid=None,
                               context=context, epistemics=epistemics)
                 args = [controller_agent, theme_agent, ev]
                 subtype = reg.get('subtype')
@@ -279,7 +279,7 @@ class ReachProcessor(object):
                 agent_coordinates.append(coords)
             annotations['agents']['coords'] = agent_coordinates
             ev = Evidence(source_api='reach', text=sentence,
-                          annotations=annotations, pmid=self.citation,
+                          annotations=annotations, pmid=None,
                           context=context, epistemics=epistemics)
             stmt = Complex(members, ev)
             self.statements.append(stmt)
@@ -367,7 +367,7 @@ class ReachProcessor(object):
                 continue
             annotations['agents']['coords'] = [theme_coords]
             ev = Evidence(source_api='reach', text=sentence,
-                          pmid=self.citation, annotations=annotations,
+                          pmid=None, annotations=annotations,
                           context=context, epistemics=epistemics)
             st = Translocation(agent, from_location, to_location,
                                evidence=ev)
@@ -385,7 +385,7 @@ class ReachProcessor(object):
             sentence = r['verbose-text']
             annotations, context = self._get_annot_context(r)
             ev = Evidence(source_api='reach', text=sentence,
-                          pmid=self.citation, annotations=annotations,
+                          pmid=None, annotations=annotations,
                           context=context, epistemics=epistemics)
             args = r['arguments']
             controller_agent = substrate_agent = product_agent = None

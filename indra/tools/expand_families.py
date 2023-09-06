@@ -9,12 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class Expander(object):
-    def __init__(self, ontology=None):
-        if ontology is None:
-            from indra.ontology.bio import bio_ontology
-            self.ontology = bio_ontology
-        else:
-            self.ontology = ontology
+    def __init__(self, ontology):
+        self.ontology = ontology
 
     def expand_families(self, stmts):
         """Generate statements by expanding members of families and complexes.

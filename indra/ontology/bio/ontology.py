@@ -27,29 +27,13 @@ class BioOntology(IndraOntology):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def initialize(self, rebuild=False):
-        if rebuild or not os.path.exists(CACHE_FILE):
-            logger.info('Initializing INDRA bio ontology for the first time, '
-                        'this may take a few minutes...')
-            self._build()
-            # Try to create the folder first, if it fails, we don't cache
-            if not os.path.exists(CACHE_DIR):
-                try:
-                    os.makedirs(CACHE_DIR)
-                except Exception:
-                    logger.warning('%s could not be created.' % CACHE_DIR)
-            # Try to dump the file next, if it fails, we don't cache
-            try:
-                logger.info('Caching INDRA bio ontology at %s' % CACHE_FILE)
-                with open(CACHE_FILE, 'wb') as fh:
-                    pickle.dump(self, fh, pickle.HIGHEST_PROTOCOL)
-            except Exception:
-                logger.warning('Failed to cache ontology at %s.' % CACHE_FILE)
-        else:
-            logger.info(
-                'Loading INDRA bio ontology from cache at %s' % CACHE_FILE)
-            with open(CACHE_FILE, 'rb') as fh:
-                self.__dict__.update(pickle.load(fh).__dict__)
+    def initialize(self):
+        logger.info(
+            'Loading INDRA bio ontology from cache at %s' % CACHE_FILE)
+        logger.info(os.getcwd())
+        logger.info(os.listdir())
+        with open(CACHE_FILE, 'rb') as fh:
+            self.__dict__.update(pickle.load(fh).__dict__)
 
     def _build(self):
         # Add all nodes with annotations
@@ -687,8 +671,4 @@ def _get_mesh_type(mesh_client, mesh_id):
         return 'other'
 
 
-CACHE_DIR = os.path.join((get_config('INDRA_RESOURCES') or
-                          os.path.join(os.path.expanduser('~'), '.indra')),
-                         '%s_ontology' % BioOntology.name,
-                         BioOntology.version)
-CACHE_FILE = os.path.join(CACHE_DIR, 'bio_ontology.pkl')
+CACHE_FILE = os.getenv("INDRA_BIO_ONTOLOGY_CACHE_FILE", "bio_ontology.pkl")

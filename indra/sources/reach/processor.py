@@ -43,9 +43,10 @@ class ReachProcessor(object):
         takes the first match produced by Reach, which is prioritized to be
         a human protein if such a match exists.
     """
-    def __init__(self, reach_output: dict):
+    def __init__(self, reach_output: dict, ontology):
         self.tree = objectpath.Tree(reach_output)
         self.statements = []
+        self.ontology = ontology
         self.get_all_events()
 
     def print_event_statistics(self):
@@ -461,7 +462,7 @@ class ReachProcessor(object):
         if 'text' not in entity_term:
             return None, None
         agent_name = entity_term['text']
-        db_refs = self._get_db_refs(entity_term)
+        db_refs = self._get_db_refs(entity_term, ontology=self.ontology)
 
         mod_terms = entity_term.get('modifications')
         mods, muts = self._get_mods_and_muts_from_mod_terms(mod_terms)
@@ -470,11 +471,11 @@ class ReachProcessor(object):
         coords = self._get_entity_coordinates(entity_term, sentence_coords=sentence_coords)
 
         agent = Agent(agent_name, db_refs=db_refs, mods=mods, mutations=muts)
-        standardize_agent_name(agent, standardize_refs=True)
+        standardize_agent_name(agent, ontology=self.ontology, standardize_refs=True)
         return agent, coords
 
     @staticmethod
-    def _get_db_refs(entity_term, organism_priority=None):
+    def _get_db_refs(entity_term, ontology, organism_priority=None):
         db_refs = {}
         for xr in entity_term['xrefs']:
             ns = xr['namespace']
@@ -567,7 +568,7 @@ class ReachProcessor(object):
                 up_id = db_refs.pop('UP', None)
                 db_refs['UPPRO'] = up_id.split('#')[1]
 
-        db_refs = standardize_db_refs(db_refs)
+        db_refs = standardize_db_refs(db_refs, ontology)
         return db_refs
 
     def _get_mods_and_muts_from_mod_terms(self, mod_terms):

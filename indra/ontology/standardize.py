@@ -30,7 +30,7 @@ def _get_mappings_dict(mappings):
     return md
 
 
-def get_standard_agent(name, db_refs, ontology=None, ns_order=None, **kwargs):
+def get_standard_agent(name, db_refs, ontology, ns_order=None, **kwargs):
     """Get a standard agent based on the name, db_refs, and a any other kwargs.
 
     name : str
@@ -61,7 +61,7 @@ def get_standard_agent(name, db_refs, ontology=None, ns_order=None, **kwargs):
     return Agent(name, db_refs=db_refs, **kwargs)
 
 
-def standardize_db_refs(db_refs, ontology=None, ns_order=None):
+def standardize_db_refs(db_refs, ontology, ns_order=None):
     """Return a standardized db refs dict for a given db refs dict.
 
     Parameters
@@ -81,10 +81,6 @@ def standardize_db_refs(db_refs, ontology=None, ns_order=None):
     dict
         The db_refs dict with standardized entries.
     """
-    if ontology is None:
-        from indra.ontology.bio import bio_ontology
-        ontology = bio_ontology
-
     # We iterate over all the db_refs entries that currently exist
     for source_db_ns, source_db_id in deepcopy(db_refs).items():
         source_db_id = _preprocess_for_mapping(source_db_ns, source_db_id)
@@ -118,7 +114,7 @@ def _preprocess_for_mapping(db_ns, db_id):
     return db_id
 
 
-def standardize_name_db_refs(db_refs, ontology=None, ns_order=None):
+def standardize_name_db_refs(db_refs, ontology, ns_order=None):
     """Return a standardized name and db refs dict for a given db refs dict.
 
     Parameters
@@ -146,7 +142,7 @@ def standardize_name_db_refs(db_refs, ontology=None, ns_order=None):
     return name, db_refs
 
 
-def get_standard_name(db_refs, ontology=None, ns_order=None):
+def get_standard_name(db_refs, ontology, ns_order=None):
     """Return a standardized name for a given db refs dict.
 
     Parameters
@@ -166,10 +162,6 @@ def get_standard_name(db_refs, ontology=None, ns_order=None):
     str or None
         The standard name based on the db refs, None if not available.
     """
-    if ontology is None:
-        from indra.ontology.bio import bio_ontology
-        ontology = bio_ontology
-
     # We next look for prioritized grounding, if missing, we return
     db_ns, db_id = get_grounding(db_refs, ns_order=ns_order)
 
@@ -194,7 +186,7 @@ def get_standard_name(db_refs, ontology=None, ns_order=None):
     return standard_name
 
 
-def standardize_agent_name(agent, standardize_refs=True, ontology=None,
+def standardize_agent_name(agent, ontology, standardize_refs=True,
                            ns_order=None):
     """Standardize the name of an Agent based on grounding information.
 

@@ -403,7 +403,7 @@ def process_fries_json_group(group_prefix, citation=None,
                             organism_priority=organism_priority)
 
 
-def process_reach_output(reach_output: dict):
+def process_reach_output(reach_output: dict, ontology):
     """Return a ReachProcessor by processing the given REACH json string.
 
     The output from the REACH parser is in this json format.
@@ -420,7 +420,7 @@ def process_reach_output(reach_output: dict):
         A ReachProcessor containing the extracted INDRA Statements
         in rp.statements.
     """
-    rp = ReachProcessor(reach_output)
+    rp = ReachProcessor(reach_output, ontology=ontology)
     rp.get_modifications()
     rp.get_complexes()
     rp.get_activation()

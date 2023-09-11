@@ -85,7 +85,7 @@ class GroundingMapper(object):
                 raise ValueError('HGNC:%s for key %s in the grounding map is '
                                  'not a valid ID' % (refs['HGNC'], key))
 
-    def map_stmts(self, stmts, do_rename=True):
+    def map_stmts(self, stmts, ontology, do_rename=True):
         """Return a new list of statements whose agents have been mapped
 
         Parameters
@@ -111,7 +111,7 @@ class GroundingMapper(object):
         import tqdm
         it = tqdm.tqdm(stmts) if len(stmts) > 1e5 else stmts
         for stmt in it:
-            mapped_stmt = self.map_agents_for_stmt(stmt, do_rename)
+            mapped_stmt = self.map_agents_for_stmt(stmt, ontology, do_rename)
             # Check if we should skip the statement
             if mapped_stmt is not None:
                 mapped_stmts.append(mapped_stmt)
@@ -120,7 +120,7 @@ class GroundingMapper(object):
         logger.info('%s statements filtered out' % num_skipped)
         return mapped_stmts
 
-    def map_agents_for_stmt(self, stmt, do_rename=True):
+    def map_agents_for_stmt(self, stmt, ontology, do_rename=True):
         """Return a new Statement whose agents have been grounding mapped.
 
         Parameters
@@ -191,7 +191,7 @@ class GroundingMapper(object):
 
             # If Adeft and Gilda were not used or didn't succeed, we do
             # grounding mapping
-            new_agent = self.map_agent(agent, do_rename) \
+            new_agent = self.map_agent(agent, ontology, do_rename) \
                 if not (adeft_success or gilda_success) else agent
 
             # If the old agent had bound conditions, but the new agent does
@@ -215,7 +215,7 @@ class GroundingMapper(object):
 
         return mapped_stmt
 
-    def map_agent(self, agent, do_rename):
+    def map_agent(self, agent, ontology, do_rename):
         """Return the given Agent with its grounding mapped.
 
         This function grounds a single agent. It returns the new Agent object
@@ -240,7 +240,7 @@ class GroundingMapper(object):
         # We always standardize DB refs as a functionality in the
         # GroundingMapper. If a new module is implemented which is
         # responsible for standardizing grounding, this can be removed.
-        agent.db_refs = self.standardize_db_refs(agent.db_refs)
+        agent.db_refs = self.standardize_db_refs(agent.db_refs, ontology)
         # If there is no TEXT available, we can return immediately since we
         # can't do mapping
         atxt = agent.db_refs.get('TEXT')
@@ -268,7 +268,8 @@ class GroundingMapper(object):
         # 2. Look agent text up in the grounding map
         for agent_text in agent_txts:
             if agent_text in self.grounding_map:
-                self.update_agent_db_refs(agent, self.grounding_map[agent_text],
+                self.update_agent_db_refs(agent, self.grounding_map[agent_text], 
+                                          ontology,
                                           do_rename)
                 return agent
 
@@ -280,11 +281,11 @@ class GroundingMapper(object):
         # This happens when there is an Agent text but it is not in the
         # grounding map. We still do the name standardization here.
         if do_rename:
-            self.standardize_agent_name(agent, standardize_refs=False)
+            self.standardize_agent_name(agent, ontology, standardize_refs=False)
         # Otherwise just return
         return agent
 
-    def update_agent_db_refs(self, agent, db_refs, do_rename=True):
+    def update_agent_db_refs(self, agent, db_refs, ontology, do_rename=True):
         """Update db_refs of agent using the grounding map
 
         If the grounding map is missing one of the HGNC symbol or Uniprot ID,
@@ -305,12 +306,12 @@ class GroundingMapper(object):
         # Standardize the IDs in the db_refs dict and set it as the Agent's
         # db_refs
         txt = agent.db_refs.get('TEXT')
-        agent.db_refs = self.standardize_db_refs(deepcopy(db_refs))
+        agent.db_refs = self.standardize_db_refs(deepcopy(db_refs), ontology)
         if txt:
             agent.db_refs['TEXT'] = txt
         # Finally, if renaming is needed we standardize the Agent's name
         if do_rename:
-            self.standardize_agent_name(agent, standardize_refs=False)
+            self.standardize_agent_name(agent, ontology, standardize_refs=False)
 
     def remove_agent_db_refs(self, agent, db_refs):
         # Standardize the IDs in the db_refs dict and set it as the Agent's
@@ -330,7 +331,7 @@ class GroundingMapper(object):
                 agent.name = agent.db_refs['TEXT']
 
     @staticmethod
-    def standardize_db_refs(db_refs):
+    def standardize_db_refs(db_refs, ontology):
         """Return a standardized db refs dict for a given db refs dict.
 
         Parameters
@@ -344,10 +345,10 @@ class GroundingMapper(object):
         dict
             The db_refs dict with standardized entries.
         """
-        return standardize_db_refs(db_refs)
+        return standardize_db_refs(db_refs, ontology=ontology)
 
     @staticmethod
-    def standardize_agent_name(agent, standardize_refs=True):
+    def standardize_agent_name(agent, ontology, standardize_refs=True):
         """Standardize the name of an Agent based on grounding information.
 
         If an agent contains a FamPlex grounding, the FamPlex ID is used as a
@@ -369,7 +370,7 @@ class GroundingMapper(object):
             Default: True
         """
         return standardize_agent_name(agent,
-                                      standardize_refs=standardize_refs)
+                                      ontology, standardize_refs=standardize_refs)
 
     @staticmethod
     def rename_agents(stmts):

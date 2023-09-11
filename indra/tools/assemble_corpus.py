@@ -90,7 +90,7 @@ def load_statements(fname, as_dict=False):
 
 
 @register_pipeline
-def map_grounding(stmts_in, do_rename=True, grounding_map=None,
+def map_grounding(stmts_in, ontology, do_rename=True, grounding_map=None,
                   misgrounding_map=None, agent_map=None, ignores=None, use_adeft=True,
                   gilda_mode=None, grounding_map_policy='replace', **kwargs):
     """Map grounding using the GroundingMapper.
@@ -147,7 +147,7 @@ def map_grounding(stmts_in, do_rename=True, grounding_map=None,
     gm = GroundingMapper(gm, agent_map=agent_map,
                          misgrounding_map=misgm, ignores=ignores,
                          use_adeft=use_adeft, gilda_mode=gilda_mode)
-    stmts_out = gm.map_stmts(stmts_in, do_rename=do_rename)
+    stmts_out = gm.map_stmts(stmts_in, ontology=ontology, do_rename=do_rename)
     # Patch wrong locations in Translocation statements
     for stmt in stmts_out:
         if isinstance(stmt, Translocation):
@@ -245,7 +245,7 @@ def merge_groundings(stmts_in):
 
 
 @register_pipeline
-def map_sequence(stmts_in, do_methionine_offset=True,
+def map_sequence(stmts_in, ontology, do_methionine_offset=True,
                  do_orthology_mapping=True, do_isoform_mapping=True, **kwargs):
     """Map sequences using the SiteMapper.
 

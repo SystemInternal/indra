@@ -26,22 +26,29 @@ class DisambManager(object):
     Has methods to run disambiguation with either adeft or gilda. Each instance
     of this class uses a single database connection.
     """
-    def __init__(self):
+    def __init__(self, ignore_indra_db=True, ingore_pubmed_abstract_fetch=True):
         self.has_local_text_db = False
+        self.ignore_indra_db = ignore_indra_db
+        self.ignore_pubmed_abstract_fetch = ingore_pubmed_abstract_fetch
         if has_config('INDRA_DB_LITE_LOCATION'):
             try:
                 from indra_db_lite import get_plaintexts_for_text_ref_ids
                 self.has_local_text_db = True
             except Exception as e:
                 pass
-        try:
-            from indra_db.util.content_scripts import TextContentSessionHandler
-            self.__tc = TextContentSessionHandler()
-        except Exception as e:
-            logger.info('INDRA DB is not available for text content '
-                        'retrieval for grounding disambiguation.')
-            logger.debug('Could not connect to the DB: %s' % e)
+        
+        if self.ignore_indra_db:
+            logger.info('Skipping check for INDRA DB...')
             self.__tc = None
+        else:
+            try:
+                from indra_db.util.content_scripts import TextContentSessionHandler
+                self.__tc = TextContentSessionHandler()
+            except Exception as e:
+                logger.info('INDRA DB is not available for text content '
+                            'retrieval for grounding disambiguation.')
+                logger.debug('Could not connect to the DB: %s' % e)
+                self.__tc = None
 
     def run_adeft_disambiguation(self, stmt, agent, idx, agent_txt):
         """Run Adeft disambiguation on an Agent in a given Statement.
@@ -278,7 +285,7 @@ class DisambManager(object):
                 logger.info('Could not get text for disambiguation from DB: %s'
                             % e)
         # If that doesn't work, we try PubMed next trying to fetch an abstract
-        if text is None:
+        if text is None and not self.ignore_pubmed_abstract_fetch:
             from indra.literature import pubmed_client
             pmid = stmt.evidence[0].pmid
             if pmid:

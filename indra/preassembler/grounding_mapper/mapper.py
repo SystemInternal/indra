@@ -1,6 +1,13 @@
-__all__ = ['GroundingMapper', 'load_grounding_map', 'default_grounding_map',
-           'default_agent_map', 'default_ignores', 'default_misgrounding_map',
-           'default_mapper', 'gm']
+__all__ = [
+    "GroundingMapper",
+    "load_grounding_map",
+    "default_grounding_map",
+    "default_agent_map",
+    "default_ignores",
+    "default_misgrounding_map",
+    "default_mapper",
+    "gm",
+]
 import os
 import csv
 import json
@@ -10,8 +17,7 @@ from indra.statements import Agent
 from indra.databases import hgnc_client
 from indra.util import read_unicode_csv
 from indra.preassembler.grounding_mapper.gilda import get_gilda_models
-from indra.ontology.standardize import standardize_db_refs, \
-    standardize_agent_name
+from indra.ontology.standardize import standardize_db_refs, standardize_agent_name
 from .disambiguate import adeft_disambiguators, DisambManager
 
 logger = logging.getLogger(__name__)
@@ -48,16 +54,25 @@ class GroundingMapper(object):
         If 'local', we assume that the gilda Python package is installed
         and will be used.
     """
-    def __init__(self, grounding_map=None, agent_map=None, ignores=None,
-                 misgrounding_map=None, use_adeft=True, gilda_mode=None):
-        self.grounding_map = grounding_map if grounding_map is not None \
-            else default_grounding_map
+
+    def __init__(
+        self,
+        grounding_map=None,
+        agent_map=None,
+        ignores=None,
+        misgrounding_map=None,
+        use_adeft=True,
+        gilda_mode=None,
+    ):
+        self.grounding_map = (
+            grounding_map if grounding_map is not None else default_grounding_map
+        )
         self.check_grounding_map(self.grounding_map)
-        self.agent_map = agent_map if agent_map is not None \
-            else default_agent_map
+        self.agent_map = agent_map if agent_map is not None else default_agent_map
         self.ignores = set(ignores) if ignores else default_ignores
-        self.misgrounding_map = misgrounding_map if misgrounding_map \
-            else default_misgrounding_map
+        self.misgrounding_map = (
+            misgrounding_map if misgrounding_map else default_misgrounding_map
+        )
         self.use_adeft = use_adeft
         self.disamb_manager = DisambManager()
         self.gilda_mode = gilda_mode
@@ -66,8 +81,9 @@ class GroundingMapper(object):
     @property
     def gilda_models(self):
         if self._gilda_models is None:
-            self._gilda_models = get_gilda_models(self.gilda_mode) \
-                if self.gilda_mode else []
+            self._gilda_models = (
+                get_gilda_models(self.gilda_mode) if self.gilda_mode else []
+            )
         return self._gilda_models
 
     @gilda_models.setter
@@ -80,10 +96,11 @@ class GroundingMapper(object):
         for key, refs in gm.items():
             if not refs:
                 continue
-            if 'HGNC' in refs and \
-                    hgnc_client.get_hgnc_name(refs['HGNC']) is None:
-                raise ValueError('HGNC:%s for key %s in the grounding map is '
-                                 'not a valid ID' % (refs['HGNC'], key))
+            if "HGNC" in refs and hgnc_client.get_hgnc_name(refs["HGNC"]) is None:
+                raise ValueError(
+                    "HGNC:%s for key %s in the grounding map is "
+                    "not a valid ID" % (refs["HGNC"], key)
+                )
 
     def map_stmts(self, stmts, ontology, do_rename=True):
         """Return a new list of statements whose agents have been mapped
@@ -109,6 +126,7 @@ class GroundingMapper(object):
         num_skipped = 0
         # Iterate over the statements
         import tqdm
+
         it = tqdm.tqdm(stmts) if len(stmts) > 1e5 else stmts
         for stmt in it:
             mapped_stmt = self.map_agents_for_stmt(stmt, ontology, do_rename)
@@ -117,7 +135,7 @@ class GroundingMapper(object):
                 mapped_stmts.append(mapped_stmt)
             else:
                 num_skipped += 1
-        logger.info('%s statements filtered out' % num_skipped)
+        logger.info("%s statements filtered out" % num_skipped)
         return mapped_stmts
 
     def map_agents_for_stmt(self, stmt, ontology, do_rename=True):
@@ -149,50 +167,60 @@ class GroundingMapper(object):
                 continue
             # If the agent's TEXT is in the ignores list, we return None to
             # then filter out the Statement
-            agent_txts = {agent.db_refs[t] for t in {'TEXT', 'TEXT_NORM'}
-                          if t in agent.db_refs}
+            agent_txts = {
+                agent.db_refs[t] for t in {"TEXT", "TEXT_NORM"} if t in agent.db_refs
+            }
             if agent_txts and agent_txts & set(self.ignores):
                 return None
 
             # Check if an adeft model exists for agent text
             adeft_success = False
-            if self.use_adeft and agent_txts and agent_txts & \
-                    set(adeft_disambiguators):
+            if self.use_adeft and agent_txts and agent_txts & set(adeft_disambiguators):
                 try:
                     # Us the longest match for disambiguation
-                    txt_for_adeft = sorted(agent_txts &
-                                           set(adeft_disambiguators),
-                                           key=lambda x: len(x))[-1]
-                    adeft_success = self.disamb_manager.\
-                        run_adeft_disambiguation(mapped_stmt, agent, idx,
-                                                 txt_for_adeft)
+                    txt_for_adeft = sorted(
+                        agent_txts & set(adeft_disambiguators), key=lambda x: len(x)
+                    )[-1]
+                    adeft_success = self.disamb_manager.run_adeft_disambiguation(
+                        mapped_stmt, agent, idx, txt_for_adeft
+                    )
                 except Exception as e:
-                    logger.error('There was an error during Adeft'
-                                 ' disambiguation of %s.' % str(agent_txts))
+                    logger.error(
+                        "There was an error during Adeft"
+                        " disambiguation of %s." % str(agent_txts)
+                    )
                     logger.error(e)
 
             gilda_success = False
             # Gilda is not used if agent text is in the grounding map
-            if not adeft_success and self.gilda_mode and \
-               not agent_txts & set(self.grounding_map) and \
-               agent_txts & set(self.gilda_models):
+            if (
+                not adeft_success
+                and self.gilda_mode
+                and not agent_txts & set(self.grounding_map)
+                and agent_txts & set(self.gilda_models)
+            ):
                 try:
                     # Us the longest match for disambiguation
-                    txt_for_gilda = sorted(agent_txts & set(self.gilda_models),
-                                           key=lambda x: len(x))[-1]
-                    gilda_success = self.disamb_manager.\
-                        run_gilda_disambiguation(mapped_stmt, agent, idx,
-                                                 txt_for_gilda,
-                                                 mode=self.gilda_mode)
+                    txt_for_gilda = sorted(
+                        agent_txts & set(self.gilda_models), key=lambda x: len(x)
+                    )[-1]
+                    gilda_success = self.disamb_manager.run_gilda_disambiguation(
+                        mapped_stmt, agent, idx, txt_for_gilda, mode=self.gilda_mode
+                    )
                 except Exception as e:
-                    logger.error('There was an error during Gilda'
-                                 ' disambiguation of %s.' % str(agent_txts))
+                    logger.error(
+                        "There was an error during Gilda"
+                        " disambiguation of %s." % str(agent_txts)
+                    )
                     logger.error(e)
 
             # If Adeft and Gilda were not used or didn't succeed, we do
             # grounding mapping
-            new_agent = self.map_agent(agent, ontology, do_rename) \
-                if not (adeft_success or gilda_success) else agent
+            new_agent = (
+                self.map_agent(agent, ontology, do_rename)
+                if not (adeft_success or gilda_success)
+                else agent
+            )
 
             # If the old agent had bound conditions, but the new agent does
             # not, copy the bound conditions over
@@ -207,7 +235,7 @@ class GroundingMapper(object):
         for agent in agent_list:
             if agent is not None:
                 for bc in agent.bound_conditions:
-                    bc.agent = self.map_agent(bc.agent, do_rename)
+                    bc.agent = self.map_agent(bc.agent, ontology, do_rename)
                     if not bc.agent:
                         # Skip the entire statement if the agent maps to None
                         # in the grounding map
@@ -243,11 +271,11 @@ class GroundingMapper(object):
         agent.db_refs = self.standardize_db_refs(agent.db_refs, ontology)
         # If there is no TEXT available, we can return immediately since we
         # can't do mapping
-        atxt = agent.db_refs.get('TEXT')
-        anormtxt = agent.db_refs.get('TEXT_NORM')
-        agent_txts = sorted({t for t in [atxt, anormtxt] if t},
-                            key=lambda x: len(x),
-                            reverse=True)
+        atxt = agent.db_refs.get("TEXT")
+        anormtxt = agent.db_refs.get("TEXT_NORM")
+        agent_txts = sorted(
+            {t for t in [atxt, anormtxt] if t}, key=lambda x: len(x), reverse=True
+        )
         if not agent_txts:
             # We still do the name standardization here
             if do_rename:
@@ -257,27 +285,27 @@ class GroundingMapper(object):
         # 1. Check if there is a full agent mapping and apply if there is
         for agent_text in agent_txts:
             if agent_text in self.agent_map:
-                mapped_to_agent = \
-                    Agent._from_json(self.agent_map[agent_text]['agent'])
+                mapped_to_agent = Agent._from_json(self.agent_map[agent_text]["agent"])
                 if atxt:
-                    mapped_to_agent.db_refs['TEXT'] = atxt
+                    mapped_to_agent.db_refs["TEXT"] = atxt
                 if anormtxt:
-                    mapped_to_agent.db_refs['TEXT_NORM'] = anormtxt
+                    mapped_to_agent.db_refs["TEXT_NORM"] = anormtxt
                 return mapped_to_agent
 
         # 2. Look agent text up in the grounding map
         for agent_text in agent_txts:
             if agent_text in self.grounding_map:
-                self.update_agent_db_refs(agent, self.grounding_map[agent_text], 
-                                          ontology,
-                                          do_rename)
+                self.update_agent_db_refs(
+                    agent, self.grounding_map[agent_text], ontology, do_rename
+                )
                 return agent
 
         # 3. Look agent text up in the misgrounding map
         for agent_text in agent_txts:
             if agent_text in self.misgrounding_map:
-                self.remove_agent_db_refs(agent,
-                                          self.misgrounding_map[agent_text])
+                self.remove_agent_db_refs(
+                    agent, self.misgrounding_map[agent_text], ontology=ontology
+                )
         # This happens when there is an Agent text but it is not in the
         # grounding map. We still do the name standardization here.
         if do_rename:
@@ -305,30 +333,31 @@ class GroundingMapper(object):
         """
         # Standardize the IDs in the db_refs dict and set it as the Agent's
         # db_refs
-        txt = agent.db_refs.get('TEXT')
+        txt = agent.db_refs.get("TEXT")
         agent.db_refs = self.standardize_db_refs(deepcopy(db_refs), ontology)
         if txt:
-            agent.db_refs['TEXT'] = txt
+            agent.db_refs["TEXT"] = txt
         # Finally, if renaming is needed we standardize the Agent's name
         if do_rename:
             self.standardize_agent_name(agent, ontology, standardize_refs=False)
 
-    def remove_agent_db_refs(self, agent, db_refs):
+    def remove_agent_db_refs(self, agent, db_refs, ontology):
         # Standardize the IDs in the db_refs dict and set it as the Agent's
         # db_refs
-        standard_refs = self.standardize_db_refs(deepcopy(db_refs))
+        standard_refs = self.standardize_db_refs(deepcopy(db_refs), ontology=ontology)
         # If there is any overlap between the Agent's db_refs and the db_refs
         # that are to be eliminated, we consider the Agent's db_refs to be
         # invalid and remove them. We then reset the Agent's name to
         # its TEXT value if available.
-        preserve_refs = {k: agent.db_refs[k] for k in {'TEXT', 'TEXT_NORM'}
-                         if k in agent.db_refs}
+        preserve_refs = {
+            k: agent.db_refs[k] for k in {"TEXT", "TEXT_NORM"} if k in agent.db_refs
+        }
         if set(standard_refs.items()) & set(agent.db_refs.items()):
             agent.db_refs = preserve_refs
-            if 'TEXT_NORM' in agent.db_refs:
-                agent.name = agent.db_refs['TEXT_NORM']
-            elif 'TEXT' in agent.db_refs:
-                agent.name = agent.db_refs['TEXT']
+            if "TEXT_NORM" in agent.db_refs:
+                agent.name = agent.db_refs["TEXT_NORM"]
+            elif "TEXT" in agent.db_refs:
+                agent.name = agent.db_refs["TEXT"]
 
     @staticmethod
     def standardize_db_refs(db_refs, ontology):
@@ -369,8 +398,9 @@ class GroundingMapper(object):
             be standardized, e.g., HGNC mapped to UP.
             Default: True
         """
-        return standardize_agent_name(agent,
-                                      ontology, standardize_refs=standardize_refs)
+        return standardize_agent_name(
+            agent, ontology, standardize_refs=standardize_refs
+        )
 
     @staticmethod
     def rename_agents(stmts):
@@ -400,8 +430,7 @@ class GroundingMapper(object):
 
 # TODO: handle the cases when there is more than one entry for the same
 # key (e.g., ROS, ER)
-def load_grounding_map(grounding_map_path, lineterminator='\r\n',
-                       hgnc_symbols=True):
+def load_grounding_map(grounding_map_path, lineterminator="\r\n", hgnc_symbols=True):
     """Return a grounding map dictionary loaded from a csv file.
 
     In the file pointed to by grounding_map_path, the number of name_space ID
@@ -435,20 +464,22 @@ def load_grounding_map(grounding_map_path, lineterminator='\r\n',
         The grounding map constructed from the given files.
     """
     gmap = {}
-    map_rows = read_unicode_csv(grounding_map_path, delimiter=',',
-                                quotechar='"',
-                                quoting=csv.QUOTE_MINIMAL,
-                                lineterminator=lineterminator)
+    map_rows = read_unicode_csv(
+        grounding_map_path,
+        delimiter=",",
+        quotechar='"',
+        quoting=csv.QUOTE_MINIMAL,
+        lineterminator=lineterminator,
+    )
     for row in map_rows:
         txt = row[0]
         keys = [entry for entry in row[1::2] if entry]
         values = [entry for entry in row[2::2] if entry]
         if not keys or not values:
-            logger.warning('Missing grounding entries for %s, skipping.' % txt)
+            logger.warning("Missing grounding entries for %s, skipping." % txt)
             continue
         if len(keys) != len(values):
-            logger.warning('Mismatched keys and values in row %s, skipping.' %
-                           str(row))
+            logger.warning("Mismatched keys and values in row %s, skipping." % str(row))
             continue
         gmap[txt] = dict(zip(keys, values))
     if hgnc_symbols:
@@ -459,18 +490,20 @@ def load_grounding_map(grounding_map_path, lineterminator='\r\n',
 def replace_hgnc_symbols(gmap):
     """Replace HGNC symbols with IDs in a grounding map."""
     for txt, mapped_refs in deepcopy(gmap).items():
-        hgnc_sym = mapped_refs.get('HGNC')
+        hgnc_sym = mapped_refs.get("HGNC")
         if hgnc_sym:
             hgnc_id = hgnc_client.get_hgnc_id(hgnc_sym)
             # Override the HGNC symbol entry from the grounding
             # map with an HGNC ID
             if hgnc_id:
-                mapped_refs['HGNC'] = hgnc_id
+                mapped_refs["HGNC"] = hgnc_id
             else:
-                logger.error('No HGNC ID corresponding to gene '
-                             'symbol %s in grounding map.' % hgnc_sym)
+                logger.error(
+                    "No HGNC ID corresponding to gene "
+                    "symbol %s in grounding map." % hgnc_sym
+                )
                 # Remove the HGNC symbol in this case
-                mapped_refs.pop('HGNC')
+                mapped_refs.pop("HGNC")
         # In case the only grounding was eliminated, we remove the entry
         # completely
         if mapped_refs:
@@ -479,35 +512,35 @@ def replace_hgnc_symbols(gmap):
 
 
 def _get_resource_path(*suffixes):
-    return os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,
-                        'resources', *suffixes)
+    return os.path.join(
+        os.path.dirname(__file__), os.pardir, os.pardir, "resources", *suffixes
+    )
 
 
 def _load_default_grounding_map():
-    default_grounding_map_path = \
-        _get_resource_path('grounding', 'grounding_map.csv')
+    default_grounding_map_path = _get_resource_path("grounding", "grounding_map.csv")
     gmap = load_grounding_map(default_grounding_map_path, hgnc_symbols=True)
     return gmap
 
 
 def _load_default_misgrounding_map():
-    default_misgrounding_map_path = \
-        _get_resource_path('grounding', 'misgrounding_map.csv')
+    default_misgrounding_map_path = _get_resource_path(
+        "grounding", "misgrounding_map.csv"
+    )
     gmap = load_grounding_map(default_misgrounding_map_path, hgnc_symbols=False)
     return gmap
 
 
 def _load_default_agent_map():
-    default_agent_grounding_path = \
-        _get_resource_path('grounding', 'agents.json')
-    with open(default_agent_grounding_path, 'r') as fh:
+    default_agent_grounding_path = _get_resource_path("grounding", "agents.json")
+    with open(default_agent_grounding_path, "r") as fh:
         agent_map = json.load(fh)
     return agent_map
 
 
 def _load_default_ignores():
-    default_ignore_path = _get_resource_path('grounding', 'ignore.csv')
-    with open(default_ignore_path, 'r') as fh:
+    default_ignore_path = _get_resource_path("grounding", "ignore.csv")
+    with open(default_ignore_path, "r") as fh:
         ignores = [l.strip() for l in fh.readlines()]
     return ignores
 
@@ -517,7 +550,9 @@ gm = default_grounding_map  # For backwards compatibility, redundant
 default_misgrounding_map = _load_default_misgrounding_map()
 default_agent_map = _load_default_agent_map()
 default_ignores = _load_default_ignores()
-default_mapper = GroundingMapper(default_grounding_map,
-                                 agent_map=default_agent_map,
-                                 ignores=default_ignores,
-                                 misgrounding_map=default_misgrounding_map)
+default_mapper = GroundingMapper(
+    default_grounding_map,
+    agent_map=default_agent_map,
+    ignores=default_ignores,
+    misgrounding_map=default_misgrounding_map,
+)

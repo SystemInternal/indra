@@ -816,9 +816,11 @@ class ReachProcessor(object):
         if sentence_id:
             qstr = "$.sentences.frames[(@.frame_id is '%s')]" % sentence_id
             res = self.tree.execute(qstr)
-            if list(res):
+            try:
                 sentence_frame = list(res)[0]
                 sections = sentence_frame.get("sections", [])
+            except IndexError:
+                pass
         epistemics["raw_sections"] = sections
         for section in sections:
             norm_section = normalize_section(section)

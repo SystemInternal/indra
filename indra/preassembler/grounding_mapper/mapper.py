@@ -279,7 +279,9 @@ class GroundingMapper(object):
         if not agent_txts:
             # We still do the name standardization here
             if do_rename:
-                self.standardize_agent_name(agent, standardize_refs=False)
+                self.standardize_agent_name(
+                    agent, ontology=ontology, standardize_refs=False
+                )
             return agent
 
         # 1. Check if there is a full agent mapping and apply if there is

@@ -773,7 +773,9 @@ class ReachProcessor(object):
             # These aren't real groundings
             elif db_name == "UAZ":
                 return None
-            standard_name, db_refs = standardize_name_db_refs({db_name: db_id})
+            standard_name, db_refs = standardize_name_db_refs(
+                {db_name: db_id}, ontology=self.ontology
+            )
             return RefContext(standard_name, db_refs=db_refs)
 
         context = BioContext()
